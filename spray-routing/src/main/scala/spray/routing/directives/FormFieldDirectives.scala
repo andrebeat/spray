@@ -18,6 +18,7 @@ package spray.routing
 package directives
 
 import shapeless._
+import shapeless.ops.hlist._
 import spray.http._
 
 trait FormFieldDirectives extends ToNameReceptaclePimps {
@@ -62,7 +63,7 @@ object FieldDefMagnet2 {
 
 trait FieldDefMagnetAux[A, B] extends (A ⇒ B)
 
-object FieldDefMagnetAux extends ToNameReceptaclePimps {
+object FieldDefMagnetAux extends LowerPriorityFieldDefMagnetAux with ToNameReceptaclePimps {
   import spray.httpx.unmarshalling.{ Unmarshaller ⇒ UM, FormFieldConverter ⇒ FFC, FromEntityOptionUnmarshaller ⇒ FEOU, _ }
   import BasicDirectives._
   import RouteDirectives._
@@ -99,18 +100,20 @@ object FieldDefMagnetAux extends ToNameReceptaclePimps {
   implicit def forNR[T](implicit ev1: UM[HttpForm], ev2: FFC[T]) =
     extractField[NameReceptacle[T], T](nr ⇒ filter(nr))
 
-  /************ tuple support ******************/
-
-  implicit def forTuple[T <: Product, L <: HList, Out](implicit hla: HListerAux[T, L], fdma: FieldDefMagnetAux[L, Out]) =
-    FieldDefMagnetAux[T, Out](tuple ⇒ fdma(hla(tuple)))
-
   /************ HList support ******************/
 
   implicit def forHList[L <: HList](implicit f: LeftFolder[L, Directive0, MapReduce.type]) =
     FieldDefMagnetAux[L, f.Out](_.foldLeft(BasicDirectives.noop)(MapReduce))
 
   object MapReduce extends Poly2 {
-    implicit def from[T, LA <: HList, LB <: HList, Out <: HList](implicit fdma: FieldDefMagnetAux[T, Directive[LB]], ev: PrependAux[LA, LB, Out]) =
+    implicit def from[T, LA <: HList, LB <: HList, Out <: HList](implicit fdma: FieldDefMagnetAux[T, Directive[LB]], ev: Prepend.Aux[LA, LB, Out]) =
       at[Directive[LA], T] { (a, t) ⇒ a & fdma(t) }
   }
+}
+
+private[directives] abstract class LowerPriorityFieldDefMagnetAux {
+  /************ tuple support ******************/
+
+  implicit def forTuple[T <: Product, L <: HList, Out](implicit gen: Generic.Aux[T, L], fdma: FieldDefMagnetAux[L, Out]) =
+    FieldDefMagnetAux[T, Out](tuple ⇒ fdma(gen.to(tuple)))
 }

@@ -19,6 +19,7 @@ package directives
 
 import java.lang.IllegalStateException
 import shapeless._
+import shapeless.ops.hlist._
 
 trait ParameterDirectives extends ToNameReceptaclePimps {
 
@@ -80,7 +81,7 @@ object ParamDefMagnet2 {
 
 trait ParamDefMagnetAux[A, B] extends (A ⇒ B)
 
-object ParamDefMagnetAux {
+object ParamDefMagnetAux extends LowerPriorityParamDefMagnetAux {
   import spray.httpx.unmarshalling.{ FromStringOptionDeserializer ⇒ FSOD, _ }
   import BasicDirectives._
   import RouteDirectives._
@@ -130,18 +131,20 @@ object ParamDefMagnetAux {
     requiredFilter(rvr.name, rvr.deserializer, rvr.requiredValue)
   }
 
-  /************ tuple support ******************/
-
-  implicit def forTuple[T <: Product, L <: HList, Out](implicit hla: HListerAux[T, L], pdma: ParamDefMagnetAux[L, Out]) =
-    ParamDefMagnetAux[T, Out](tuple ⇒ pdma(hla(tuple)))
-
   /************ HList support ******************/
 
   implicit def forHList[L <: HList](implicit f: LeftFolder[L, Directive0, MapReduce.type]) =
     ParamDefMagnetAux[L, f.Out](_.foldLeft(BasicDirectives.noop)(MapReduce))
 
   object MapReduce extends Poly2 {
-    implicit def from[T, LA <: HList, LB <: HList, Out <: HList](implicit pdma: ParamDefMagnetAux[T, Directive[LB]], ev: PrependAux[LA, LB, Out]) =
+    implicit def from[T, LA <: HList, LB <: HList, Out <: HList](implicit pdma: ParamDefMagnetAux[T, Directive[LB]], ev: Prepend.Aux[LA, LB, Out]) =
       at[Directive[LA], T] { (a, t) ⇒ a & pdma(t) }
   }
+}
+
+private[directives] abstract class LowerPriorityParamDefMagnetAux {
+  /************ tuple support ******************/
+
+  implicit def forTuple[T <: Product, L <: HList, Out](implicit gen: Generic.Aux[T, L], pdma: ParamDefMagnetAux[L, Out]) =
+    ParamDefMagnetAux[T, Out](tuple ⇒ pdma(gen.to(tuple)))
 }

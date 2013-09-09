@@ -17,7 +17,7 @@ object Dependencies {
   val akkaSlf4j     = "com.typesafe.akka"                       %%  "akka-slf4j"                  % "2.1.4"
   val akkaTestKit   = "com.typesafe.akka"                       %%  "akka-testkit"                % "2.1.4"
   val parboiled     = "org.parboiled"                           %%  "parboiled-scala"             % "1.1.5"
-  val shapeless     = "com.chuusai"                             %%  "shapeless"                   % "1.2.4"
+  val shapeless     = "com.chuusai"                             %   "shapeless"                   % "2.0.0-M1" cross CrossVersion.full
   val scalatest     = "org.scalatest"                           %%  "scalatest"                   % "1.9.1"
   val specs2        = "org.specs2"                              %%  "specs2"                      % "1.14"
   val sprayJson     = "io.spray"                                %%  "spray-json"                  % "1.2.5"
